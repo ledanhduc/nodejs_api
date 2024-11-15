@@ -4,7 +4,7 @@ import { readFileSync } from 'fs'; // To read JSON file
 import path from 'path'; // To handle file paths
 
 const appServer = express();
-const port = 8080;
+const port = 3000;
 
 // Read the Firebase authentication JSON file
 const serviceAccount = JSON.parse(readFileSync(path.resolve('./sendopt-20057-b6de5656112f.json'), 'utf8'));
@@ -49,10 +49,10 @@ appServer.post('/ping', async (req, res) => {
 });
 
 // Start the server
-// appServer.listen(port, () => {
-//   console.log(`Server running on http://localhost:${port}`);
-// });
-
-appServer.listen(port, '0.0.0.0', () => {
-  console.log(`Server running on http://0.0.0.0:${port}`);
+appServer.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
 });
+
+// appServer.listen(port, '0.0.0.0', () => {
+//   console.log(`Server running on http://0.0.0.0:${port}`);
+// });
