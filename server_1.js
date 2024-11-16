@@ -2,6 +2,7 @@ import express from 'express';
 import admin from 'firebase-admin';
 import { readFileSync } from 'fs'; // To read JSON file
 import path from 'path'; // To handle file paths
+import sharp from 'sharp';
 
 const appServer = express();
 const port = 8080;
