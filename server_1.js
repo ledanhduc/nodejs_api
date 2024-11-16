@@ -16,90 +16,120 @@ admin.initializeApp({
 });
 
 
-////////////////////////////////////////////// 
-/////     #root file server_1_2.js      /////
-////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+//\\\     #root file server_post_cutImg_dataFB.js        \\\\
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Serve JSON requests
-appServer.use(express.json());
+const db = admin.database();
 
-// 'en-GB' trả về định dạng dd/mm/yyyy
-function formatDate(timestamp) {
-  const date = new Date(timestamp);
+async function Img2Text(base64Image) {
+  return new Promise((resolve, reject) => {
+    const requestData = { image_base64: base64Image };
 
-  return date.toLocaleDateString('en-GB'); 
-}
-const formattedDate = formatDate(Date.now());
-// Create a random number and send it to Firebase
-async function sendRandomNumber() {
-  const randomNumber = Math.floor(Math.random() * 1000);
-  // const timestamp = Date.now();
-
-  // Get a reference to the database
-  const db = admin.database();
-  
-  // Get references to the data paths
-  const randomNumberRef = db.ref('/nodejs/test1/randomNumber');
-  const timestampRef = db.ref('/nodejs/test1/timestamp');
-
-  // Sending random number and timestamp to Firebase
-  await randomNumberRef.set(randomNumber);
-  await timestampRef.set(formattedDate);
-
-  console.log(`Random Number: ${randomNumber}, Timestamp: ${formattedDate}`);
-}
-
-// A new function to send a custom message
-async function sendMessage(id, message) {
-  // Get a reference to the database
-  const db = admin.database();
-
-  // Reference to the Firebase path based on the id
-  // const messageRef = db.ref(`/nodejs/test2/messages/${id}/message`);
-  // const timestampRef = db.ref(`/nodejs/test2/messages/${id}/messageTimestamp`);
-  const messageRef = db.ref('/nodejs/test2/message');
-  const timestampRef = db.ref('/nodejs/test2/messageTimestamp');
-  const idRef = db.ref('/nodejs/test2/id');
-
-  const formattedDate = new Date().toISOString(); // Example of formatting the date
-
-  // Save message and timestamp for the given id
-  await messageRef.set(message);
-  await timestampRef.set(formattedDate);
-  await idRef.set(id);
-
-  console.log(`ID: ${id}, Message: ${message}, Timestamp: ${formattedDate}`);
+    fetch('http://127.0.0.1:5000/process_image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestData),
+    })
+    .then(response => response.json())  // Assuming response is in JSON format
+    .then(data => {
+      if (data.number) {
+        resolve(data.number);  // Only resolve if 'number' is available in response
+        console.log(data.number)
+      } else {
+        reject(new Error('No number found in response'));
+      }
+    })
+    .catch(error => {
+      console.error('Error processing image:', error);
+      reject(error);
+    });
+  });
 }
 
 
-// Listen for POST requests from ESP32 or any device
-appServer.post('/ping', async (req, res) => {
-  console.log('Received POST request to /ping');
-  
-  // Call the function to send the random number to Firebase
-  await sendRandomNumber();
-  
-  // Send a response back to the client
-  res.status(200).send('Data sent to Firebase');
-});
+// Post endpoint to process image and store result in Firebase
+appServer.post('/processImage', async (req, res) => {
+  try {
+    // Retrieve 'id' and 'imgRef' from query parameters
+    const { id, imgRef } = req.query;
+    
+    if (!id || !imgRef) {
+      return res.status(400).send('Missing "id" or "imgRef" query parameter');
+    }
 
-// New route to send a custom message and id
-appServer.post('/sendMessage', async (req, res) => {
-  // Lấy id và message từ query string
-  const { id, message } = req.query;
+    // Lấy dữ liệu từ Firebase
+    const snapshot = await db.ref(`/${id}/${imgRef}`).get();
+    const img = snapshot.val(); // Base64 Image
 
-  // Kiểm tra nếu id hoặc message không tồn tại trong query string
-  if (!id || !message) {
-    return res.status(400).send('Both id and message are required');
+    const snapshot1 = await db.ref(`/${id}/angle`).get();
+    const angle = snapshot1.val(); // Angle value
+
+    const snapshot2 = await db.ref(`/${id}/startX`).get();
+    const startX = snapshot2.val(); // Start X
+
+    const snapshot3 = await db.ref(`/${id}/startY`).get();
+    const startY = snapshot3.val(); // Start Y
+
+    const snapshot4 = await db.ref(`/${id}/endX`).get();
+    const endX = snapshot4.val(); // End X
+
+    const snapshot5 = await db.ref(`/${id}/endY`).get();
+    const endY = snapshot5.val(); // End Y
+
+  // Convert Base64 to Buffer
+  const buffer = Buffer.from(img, 'base64');
+
+  // Process the image using Sharp
+  let processedImage = await sharp(buffer)
+    .rotate(angle)  // Rotate the image if necessary
+    .composite([{
+      input: Buffer.from(
+        `<svg width="${endX - startX}" height="${endY - startY}">
+          <rect x="0" y="0" width="${endX - startX}" height="${endY - startY}" fill="none" stroke="red" stroke-width="5" />
+        </svg>`),
+      top: startY,
+      left: startX,
+    }])
+    .extract({ left: startX, top: startY, width: endX - startX, height: endY - startY }) // Crop the image to the red box area
+    .resize({ // Optionally increase quality or resize image (for higher quality)
+      width: endX - startX,
+      height: endY - startY,
+      withoutEnlargement: true,  // Do not enlarge the image
+      kernel: sharp.kernel.lanczos3, // Use Lanczos for better quality
+      quality: 100  // Set quality to high (1-100)
+    })
+    .toBuffer();
+
+    // Convert processed image to Base64
+    const processedBase64 = processedImage.toString('base64');
+
+    // Generate cutRef for the processed image
+    const cutRef = "cut_" + imgRef;
+    const cutimgrRef = db.ref(`/${id}/${cutRef}`);
+
+    // Store the processed image (Base64) into Firebase
+    await cutimgrRef.set(processedBase64);
+
+    
+    // Wait for Img2Text result
+    const number = await Img2Text(processedBase64);  // Use await to get the number from Img2Text
+
+    // Store the result into Firebase
+    const numbRef = "number_" + imgRef;
+    const numberRef = db.ref(`/${id}/${numbRef}`);
+    await numberRef.set(number);  // Save the number into Firebase
+
+
+    // Return success response
+    res.status(200).send('Image processed and sent to Firebase');
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Failed to process and store image');
   }
-
-  console.log('Received POST request to /sendMessage');
-  
-  // Gọi hàm để gửi message và id lên Firebase
-  await sendMessage(id, message);
-  
-  // Gửi phản hồi lại client
-  res.status(200).send('Message sent to Firebase');
 });
 
 // Start the server
