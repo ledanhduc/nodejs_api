@@ -5,7 +5,7 @@ import path from 'path'; // To handle file paths
 import sharp from 'sharp';
 
 const appServer = express();
-const port = 3000;
+const port = 8080;
 
 // Read the Firebase authentication JSON file
 const serviceAccount = JSON.parse(readFileSync(path.resolve('./sendopt-20057-b6de5656112f.json'), 'utf8'));
@@ -20,10 +20,6 @@ admin.initializeApp({
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 //\\\     #root file server_post_cutImg_dataFB.js        \\\\
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-const admin = require('firebase-admin');
-const fetch = require('node-fetch');  // Make sure 'node-fetch' is installed
-const sharp = require('sharp');  // Make sure 'sharp' is installed
 
 const db = admin.database();
 
@@ -77,19 +73,19 @@ appServer.post('/processImage', async (req, res) => {
     const img = snapshot.val();  // Base64 Image
 
     const snapshot1 = await db.ref(`/${id}/angle`).get();
-    const angle = snapshot1.exists() ? snapshot1.val() : 0; // Default to 0 if angle is missing
+    const angle = snapshot1.exists() ? snapshot1.val() : console.log("miss angle"); 
 
     const snapshot2 = await db.ref(`/${id}/startX`).get();
-    const startX = snapshot2.exists() ? snapshot2.val() : 0; // Default to 0 if missing
+    const startX = snapshot2.exists() ? snapshot2.val() : console.log("miss startX"); 
 
     const snapshot3 = await db.ref(`/${id}/startY`).get();
-    const startY = snapshot3.exists() ? snapshot3.val() : 0; // Default to 0 if missing
+    const startY = snapshot3.exists() ? snapshot3.val() : console.log("miss startY"); 
 
     const snapshot4 = await db.ref(`/${id}/endX`).get();
-    const endX = snapshot4.exists() ? snapshot4.val() : 100; // Default to 100 if missing
+    const endX = snapshot4.exists() ? snapshot4.val() : console.log("miss endX"); 
 
     const snapshot5 = await db.ref(`/${id}/endY`).get();
-    const endY = snapshot5.exists() ? snapshot5.val() : 100; // Default to 100 if missing
+    const endY = snapshot5.exists() ? snapshot5.val() : console.log("miss endY");
 
     // Convert Base64 to Buffer
     const buffer = Buffer.from(img, 'base64');
