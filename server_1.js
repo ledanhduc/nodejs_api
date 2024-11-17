@@ -23,32 +23,32 @@ admin.initializeApp({
 
 const db = admin.database();
 
-// async function Img2Text(base64Image) {
-//   return new Promise((resolve, reject) => {
-//     const requestData = { image_base64: base64Image };
+async function Img2Text(base64Image) {
+  return new Promise((resolve, reject) => {
+    const requestData = { image_base64: base64Image };
 
-//     fetch('http://127.0.0.1:5000/process_image', {
-//       method: 'POST',
-//       headers: {
-//         'Content-Type': 'application/json',
-//       },
-//       body: JSON.stringify(requestData),
-//     })
-//     .then(response => response.json())  // Assuming response is in JSON format
-//     .then(data => {
-//       if (data.number) {
-//         resolve(data.number);  // Only resolve if 'number' is available in response
-//         console.log(data.number)
-//       } else {
-//         reject(new Error('No number found in response'));
-//       }
-//     })
-//     .catch(error => {
-//       console.error('Error processing image:', error);
-//       reject(error);
-//     });
-//   });
-// }
+    fetch('https://virtually-excited-quail.ngrok-free.app/process_image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestData),
+    })
+    .then(response => response.json())  // Assuming response is in JSON format
+    .then(data => {
+      if (data.number) {
+        resolve(data.number);  // Only resolve if 'number' is available in response
+        console.log(data.number)
+      } else {
+        reject(new Error('No number found in response'));
+      }
+    })
+    .catch(error => {
+      console.error('Error processing image:', error);
+      reject(error);
+    });
+  });
+}
 
 
 // Post endpoint to process image and store result in Firebase
@@ -116,12 +116,12 @@ appServer.post('/processImage', async (req, res) => {
 
     
     // Wait for Img2Text result
-    // const number = await Img2Text(processedBase64);  // Use await to get the number from Img2Text
+    const number = await Img2Text(processedBase64);  // Use await to get the number from Img2Text
 
-    // // Store the result into Firebase
-    // const numbRef = "number_" + imgRef;
-    // const numberRef = db.ref(`/${id}/${numbRef}`);
-    // await numberRef.set(number);  // Save the number into Firebase
+    // Store the result into Firebase
+    const numbRef = "number_" + imgRef;
+    const numberRef = db.ref(`/${id}/${numbRef}`);
+    await numberRef.set(number);  // Save the number into Firebase
 
 
     // Return success response
