@@ -55,8 +55,10 @@ async function Img2Text(base64Image) {
   });
 }
 
+const processImg_branch = "processImage"
+
 // Post endpoint to process image and store result in Firebase
-appServer.post('/processImage', async (req, res) => {
+appServer.post(`/${processImg_branch}`, async (req, res) => {
   try {
     // Retrieve 'id' and 'imgRef' from query parameters
     const { id, imgRef } = req.query;
@@ -73,19 +75,19 @@ appServer.post('/processImage', async (req, res) => {
     const img = snapshot.val();  // Base64 Image
 
     const snapshot1 = await db.ref(`/${id}/angle`).get();
-    const angle = snapshot1.exists() ? snapshot1.val() : console.log("miss angle"); 
+    const angle = snapshot1.exists() ? snapshot1.val() : console.log("miss angle data"); 
 
     const snapshot2 = await db.ref(`/${id}/startX`).get();
     const startX = snapshot2.exists() ? snapshot2.val() : console.log("miss startX"); 
 
     const snapshot3 = await db.ref(`/${id}/startY`).get();
-    const startY = snapshot3.exists() ? snapshot3.val() : console.log("miss startY"); 
+    const startY = snapshot3.exists() ? snapshot3.val() : console.log("miss startY data"); 
 
     const snapshot4 = await db.ref(`/${id}/endX`).get();
-    const endX = snapshot4.exists() ? snapshot4.val() : console.log("miss endX"); 
+    const endX = snapshot4.exists() ? snapshot4.val() : console.log("miss endX data"); 
 
     const snapshot5 = await db.ref(`/${id}/endY`).get();
-    const endY = snapshot5.exists() ? snapshot5.val() : console.log("miss endY");
+    const endY = snapshot5.exists() ? snapshot5.val() : console.log("miss endY data");
 
     // Convert Base64 to Buffer
     const buffer = Buffer.from(img, 'base64');
@@ -130,11 +132,44 @@ appServer.post('/processImage', async (req, res) => {
     await numberRef.set(number);  // Save the number into Firebase
 
     // Return success response
-    res.status(200).send('Image processed and sent to Firebase');
+    res.status(200).send(`${processImg_branch} processed and sent to Firebase`);
 
   } catch (error) {
     console.error('Error processing image:', error);
-    res.status(500).send('Failed to process and store image: ' + error.message);
+    res.status(500).send(`Failed to process and store img -${processImg_branch}: ` + error.message);
+  }
+});
+
+const swapImg_branch = "swapImageMonthly"
+appServer.post(`/${swapImg_branch}`, async (req, res) => {
+  try {
+
+    const { id, preRef, curRef, newcurRef  } = req.query;
+    
+    if (!id || !preRef || !curRef || !newcurRef) {
+      return res.status(400).send('Missing "id", "preRef", "curRef" or "newcurRef"');
+    }
+
+    // Lấy dữ liệu từ Firebase
+    const snapshot1 = await db.ref(`/${id}/${curRef}`).get();
+    const current = snapshot1.val(); // Base64 Image
+
+    const snapshot2 = await db.ref(`/${id}/${newcurRef}`).get();
+    const newcurrent = snapshot2.val(); // Base64 Image
+    
+    const currentRef = db.ref(`/${id}/${curRef}`);
+    await currentRef.set(newcurrent);  // Save the number into Firebase
+
+    const previousRef = db.ref(`/${id}/${preRef}`);
+    await previousRef.set(current);  // Save the number into Firebase
+
+
+    // Return success response
+    res.status(200).send(`${swapImg_branch} processed and sent to Firebase`);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).send(`Failed to process and store image ${swapImg_branch}`);
   }
 });
 
