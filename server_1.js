@@ -5,7 +5,7 @@ import path from 'path'; // To handle file paths
 import sharp from 'sharp';
 
 const appServer = express();
-const port = 8080;
+const port = 3000;
 
 // Read the Firebase authentication JSON file
 const serviceAccount = JSON.parse(readFileSync(path.resolve('./sendopt-20057-b6de5656112f.json'), 'utf8'));
@@ -21,6 +21,10 @@ admin.initializeApp({
 //\\\     #root file server_post_cutImg_dataFB.js        \\\\
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+const admin = require('firebase-admin');
+const fetch = require('node-fetch');  // Make sure 'node-fetch' is installed
+const sharp = require('sharp');  // Make sure 'sharp' is installed
+
 const db = admin.database();
 
 async function Img2Text(base64Image) {
@@ -34,11 +38,16 @@ async function Img2Text(base64Image) {
       },
       body: JSON.stringify(requestData),
     })
-    .then(response => response.json())  // Assuming response is in JSON format
+    .then(response => {
+      if (!response.ok) {
+        return reject(new Error(`Error processing image: ${response.statusText}`));
+      }
+      return response.json();
+    })
     .then(data => {
       if (data.number) {
-        resolve(data.number);  // Only resolve if 'number' is available in response
-        console.log(data.number)
+        resolve(data.number);
+        console.log(data.number);
       } else {
         reject(new Error('No number found in response'));
       }
@@ -50,7 +59,6 @@ async function Img2Text(base64Image) {
   });
 }
 
-
 // Post endpoint to process image and store result in Firebase
 appServer.post('/processImage', async (req, res) => {
   try {
@@ -61,48 +69,51 @@ appServer.post('/processImage', async (req, res) => {
       return res.status(400).send('Missing "id" or "imgRef" query parameter');
     }
 
-    // Lấy dữ liệu từ Firebase
+    // Retrieve image and additional data from Firebase
     const snapshot = await db.ref(`/${id}/${imgRef}`).get();
-    const img = snapshot.val(); // Base64 Image
+    if (!snapshot.exists()) {
+      return res.status(404).send('Image not found in Firebase');
+    }
+    const img = snapshot.val();  // Base64 Image
 
     const snapshot1 = await db.ref(`/${id}/angle`).get();
-    const angle = snapshot1.val(); // Angle value
+    const angle = snapshot1.exists() ? snapshot1.val() : 0; // Default to 0 if angle is missing
 
     const snapshot2 = await db.ref(`/${id}/startX`).get();
-    const startX = snapshot2.val(); // Start X
+    const startX = snapshot2.exists() ? snapshot2.val() : 0; // Default to 0 if missing
 
     const snapshot3 = await db.ref(`/${id}/startY`).get();
-    const startY = snapshot3.val(); // Start Y
+    const startY = snapshot3.exists() ? snapshot3.val() : 0; // Default to 0 if missing
 
     const snapshot4 = await db.ref(`/${id}/endX`).get();
-    const endX = snapshot4.val(); // End X
+    const endX = snapshot4.exists() ? snapshot4.val() : 100; // Default to 100 if missing
 
     const snapshot5 = await db.ref(`/${id}/endY`).get();
-    const endY = snapshot5.val(); // End Y
+    const endY = snapshot5.exists() ? snapshot5.val() : 100; // Default to 100 if missing
 
-  // Convert Base64 to Buffer
-  const buffer = Buffer.from(img, 'base64');
+    // Convert Base64 to Buffer
+    const buffer = Buffer.from(img, 'base64');
 
-  // Process the image using Sharp
-  let processedImage = await sharp(buffer)
-    .rotate(angle)  // Rotate the image if necessary
-    .composite([{
-      input: Buffer.from(
-        `<svg width="${endX - startX}" height="${endY - startY}">
-          <rect x="0" y="0" width="${endX - startX}" height="${endY - startY}" fill="none" stroke="red" stroke-width="5" />
-        </svg>`),
-      top: startY,
-      left: startX,
-    }])
-    .extract({ left: startX, top: startY, width: endX - startX, height: endY - startY }) // Crop the image to the red box area
-    .resize({ // Optionally increase quality or resize image (for higher quality)
-      width: endX - startX,
-      height: endY - startY,
-      withoutEnlargement: true,  // Do not enlarge the image
-      kernel: sharp.kernel.lanczos3, // Use Lanczos for better quality
-      quality: 100  // Set quality to high (1-100)
-    })
-    .toBuffer();
+    // Process the image using Sharp
+    let processedImage = await sharp(buffer)
+      .rotate(angle)  // Rotate the image if necessary
+      .composite([{
+        input: Buffer.from(
+          `<svg width="${endX - startX}" height="${endY - startY}">
+            <rect x="0" y="0" width="${endX - startX}" height="${endY - startY}" fill="none" stroke="red" stroke-width="5" />
+          </svg>`),
+        top: startY,
+        left: startX,
+      }])
+      .extract({ left: startX, top: startY, width: endX - startX, height: endY - startY }) // Crop the image to the red box area
+      .resize({ // Optionally increase quality or resize image (for higher quality)
+        width: endX - startX,
+        height: endY - startY,
+        withoutEnlargement: true,  // Do not enlarge the image
+        kernel: sharp.kernel.lanczos3, // Use Lanczos for better quality
+        quality: 100  // Set quality to high (1-100)
+      })
+      .toBuffer();
 
     // Convert processed image to Base64
     const processedBase64 = processedImage.toString('base64');
@@ -114,7 +125,6 @@ appServer.post('/processImage', async (req, res) => {
     // Store the processed image (Base64) into Firebase
     await cutimgrRef.set(processedBase64);
 
-    
     // Wait for Img2Text result
     const number = await Img2Text(processedBase64);  // Use await to get the number from Img2Text
 
@@ -123,13 +133,12 @@ appServer.post('/processImage', async (req, res) => {
     const numberRef = db.ref(`/${id}/${numbRef}`);
     await numberRef.set(number);  // Save the number into Firebase
 
-
     // Return success response
     res.status(200).send('Image processed and sent to Firebase');
 
   } catch (error) {
-    console.error(error);
-    res.status(500).send('Failed to process and store image');
+    console.error('Error processing image:', error);
+    res.status(500).send('Failed to process and store image: ' + error.message);
   }
 });
 
