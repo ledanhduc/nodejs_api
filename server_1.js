@@ -18,7 +18,9 @@ admin.initializeApp({
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-//\\\     #root file server_post_cutImg_dataFB.js        \\\\
+//\\\     #root file server_post_cutImg_dataFB.js                \\\\
+//\\\     #add swapImageMonthly server_swapImage_monthly.js        \\\\
+//\\\     #add base642fb server_set_base64_2fb.js                 \\\\
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const db = admin.database();
@@ -170,6 +172,33 @@ appServer.post(`/${swapImg_branch}`, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).send(`Failed to process and store image ${swapImg_branch}`);
+  }
+});
+
+const base642fb_branch = "base642fb"
+appServer.post(`/${base642fb_branch}`, async (req, res) => {
+  try {
+    // Extract id, imgRef, and base64Image from the request
+    const { id, imgRef } = req.query;  // Extract query parameters
+    const { base64Image } = req.body;  // Extract body content
+
+    // Check if all required parameters are present
+    if (!id || !imgRef || !base64Image) {
+      return res.status(400).send('Missing "id", "imgRef" or "base64Image"');
+    }
+
+    // Save the base64 image data to Firebase Database
+    const currentRef = db.ref(`/${id}/${imgRef}`);
+    await currentRef.set(base64Image);  // Save the base64 image into Firebase
+
+    console.log(`Image data saved to Firebase at path: ${id}/${imgRef}`);
+
+    // Return success response
+    res.status(200).send(`${base642fb_branch} processed and sent to Firebase`);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).send(`Failed to process and store image ${base642fb_branch}`);
   }
 });
 
