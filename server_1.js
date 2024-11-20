@@ -23,7 +23,10 @@ admin.initializeApp({
 //\\\     #add base642fb server_set_base64_2fb.js                 \\\\
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+appServer.use(express.json({ limit: '1mb' }));  // Giới hạn payload là 50MB
+
 const db = admin.database();
+
 
 async function Img2Text(base64Image) {
   return new Promise((resolve, reject) => {
