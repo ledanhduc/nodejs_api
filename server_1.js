@@ -14,18 +14,21 @@ const serviceAccount = JSON.parse(readFileSync(path.resolve('./sendopt-20057-b6d
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),  // Make sure to provide the correct JSON file
   databaseURL: 'https://sendopt-20057-default-rtdb.asia-southeast1.firebasedatabase.app',  // Firebase Realtime Database URL
+  storageBucket: 'gs://sendopt-20057.appspot.com'
 });
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 //\\\     #root file server_post_cutImg_dataFB.js                \\\\
-//\\\     #add swapImageMonthly server_swapImage_monthly.js        \\\\
-//\\\     #add base642fb server_set_base64_2fb.js                 \\\\
+//\\\     #add swapImageMonthly  server_swapImage_monthly.js        \\\\
+//\\\     #add base642fb  server_set_base64_2fb.js  | COMMENT     \\\\
+//\\\     #add storage  server_storage_base64_test.js                \\\\
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-appServer.use(express.json({ limit: '1mb' }));  // Giới hạn payload là 50MB
+appServer.use(express.json({ limit: '1mb' }));  // Giới hạn payload là 1MB
 
 const db = admin.database();
+const storage = admin.storage();
 
 
 async function Img2Text(base64Image) {
@@ -145,38 +148,38 @@ appServer.post(`/${processImg_branch}`, async (req, res) => {
   }
 });
 
-const swapImg_branch = "swapImageMonthly"
-appServer.post(`/${swapImg_branch}`, async (req, res) => {
-  try {
+// const swapImg_branch = "swapImageMonthly"
+// appServer.post(`/${swapImg_branch}`, async (req, res) => {
+//   try {
 
-    const { id, preRef, curRef, newcurRef  } = req.query;
+//     const { id, preRef, curRef, newcurRef  } = req.query;
     
-    if (!id || !preRef || !curRef || !newcurRef) {
-      return res.status(400).send('Missing "id", "preRef", "curRef" or "newcurRef"');
-    }
+//     if (!id || !preRef || !curRef || !newcurRef) {
+//       return res.status(400).send('Missing "id", "preRef", "curRef" or "newcurRef"');
+//     }
 
-    // Lấy dữ liệu từ Firebase
-    const snapshot1 = await db.ref(`/${id}/${curRef}`).get();
-    const current = snapshot1.val(); // Base64 Image
+//     // Lấy dữ liệu từ Firebase
+//     const snapshot1 = await db.ref(`/${id}/${curRef}`).get();
+//     const current = snapshot1.val(); // Base64 Image
 
-    const snapshot2 = await db.ref(`/${id}/${newcurRef}`).get();
-    const newcurrent = snapshot2.val(); // Base64 Image
+//     const snapshot2 = await db.ref(`/${id}/${newcurRef}`).get();
+//     const newcurrent = snapshot2.val(); // Base64 Image
     
-    const currentRef = db.ref(`/${id}/${curRef}`);
-    await currentRef.set(newcurrent);  // Save the number into Firebase
+//     const currentRef = db.ref(`/${id}/${curRef}`);
+//     await currentRef.set(newcurrent);  // Save the number into Firebase
 
-    const previousRef = db.ref(`/${id}/${preRef}`);
-    await previousRef.set(current);  // Save the number into Firebase
+//     const previousRef = db.ref(`/${id}/${preRef}`);
+//     await previousRef.set(current);  // Save the number into Firebase
 
 
-    // Return success response
-    res.status(200).send(`${swapImg_branch} processed and sent to Firebase`);
+//     // Return success response
+//     res.status(200).send(`${swapImg_branch} processed and sent to Firebase`);
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).send(`Failed to process and store image ${swapImg_branch}`);
-  }
-});
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).send(`Failed to process and store image ${swapImg_branch}`);
+//   }
+// });
 
 const base642fb_branch = "base642fb"
 appServer.post(`/${base642fb_branch}`, async (req, res) => {
@@ -202,6 +205,50 @@ appServer.post(`/${base642fb_branch}`, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).send(`Failed to process and store image ${base642fb_branch}`);
+  }
+});
+
+const branch = "storage"
+appServer.post(`/${branch}`, async (req, res) => {
+  try {
+    // Extract id, newcurRef, and base64Image from the request
+    const { id } = req.query;
+    const { base64Image } = req.body;  // Assuming you're sending the base64 in the request body
+
+    if (!id || !base64Image) {
+      return res.status(400).send('Missing "id" or "base64Image"');
+    }
+
+    // Decode the base64 image to a buffer
+    let buffer;
+    if (base64Image.startsWith('data:image/')) {
+      const base64Data = base64Image.split(',')[1];  // Remove the data URL prefix
+      buffer = Buffer.from(base64Data, 'base64');
+    } else {
+      buffer = Buffer.from(base64Image, 'base64');
+    }
+
+    const ddmmyyyy = (new Date()).toLocaleDateString('en-GB', { 
+      timeZone: 'Asia/Bangkok', 
+    }).replace(/[\/]/g, '_');;
+    // console.log(formattedDateGMT7);
+
+    const storagePath = `doan3/${id}/${ddmmyyyy}.jpg`;  // You can change the file extension based on the image type
+
+    // Upload the image to Firebase Storage
+    const file = storage.bucket().file(storagePath);
+    await file.save(buffer, {
+      contentType: 'image/jpeg',  // Adjust the content type based on your image format
+    });
+
+    console.log(`Image saved to Firebase Storage at path: ${storagePath}`);
+
+    // Return success response
+    res.status(200).send(`${branch} processed and save to Storage`);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).send(`Failed to process and store image ${branch}`);
   }
 });
 
