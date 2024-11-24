@@ -5,7 +5,7 @@ import path from 'path'; // To handle file paths
 import sharp from 'sharp';
 
 const appServer = express();
-const port = 8080;
+
 
 // Read the Firebase authentication JSON file
 const serviceAccount = JSON.parse(readFileSync(path.resolve('./sendopt-20057-b6de5656112f.json'), 'utf8'));
@@ -19,16 +19,14 @@ admin.initializeApp({
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-//\\\     #root file server_post_cutImg_dataFB.js                \\\\
-//\\\     #add swapImageMonthly  server_swapImage_monthly.js        \\\\
-//\\\     #add base642fb  server_set_base64_2fb.js  | COMMENT     \\\\
-//\\\     #add storage  server_storage_base64_test.js                \\\\
+//\\\     #root file server_1_3.js                \\\\
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 appServer.use(express.json({ limit: '1mb' }));  // Giới hạn payload là 1MB
 
 const db = admin.database();
-const storage = admin.storage();
+// const storage = admin.storage();
 
 
 async function Img2Text(base64Image) {
@@ -63,24 +61,56 @@ async function Img2Text(base64Image) {
   });
 }
 
-const processImg_branch = "processImage"
+const ddmm = (new Date()).toLocaleDateString('en-GB', { 
+  timeZone: 'Asia/Bangkok', 
+}).split('/').slice(1, 2).join('_');
 
-// Post endpoint to process image and store result in Firebase
-appServer.post(`/${processImg_branch}`, async (req, res) => {
+const time = (new Date()).toLocaleTimeString('en-GB', { 
+  timeZone: 'Asia/Bangkok',
+  hour12: false  // Tùy chọn này sẽ giúp lấy giờ theo định dạng 24h
+});
+
+// API process base64 save to Firebase
+const base642fb_branch = "base642fb";
+appServer.post(`/${base642fb_branch}`, async (req, res) => {
   try {
-    // Retrieve 'id' and 'imgRef' from query parameters
-    const { id, imgRef } = req.query;
-    
-    if (!id || !imgRef) {
-      return res.status(400).send('Missing "id" or "imgRef" query parameter');
+    // Extract id, imgRef, and base64Image from the request
+    const { id, imgRef } = req.query;  // Extract query parameters
+    const { base64Image } = req.body;  // Extract body content
+
+    // Check if all required parameters are present
+    if (!id || !imgRef || !base64Image) {
+      return res.status(400).send('Missing "id", "imgRef" or "base64Image"');
     }
 
-    // Retrieve image and additional data from Firebase
-    const snapshot = await db.ref(`/${id}/${imgRef}`).get();
-    if (!snapshot.exists()) {
-      return res.status(404).send('Image not found in Firebase');
+    if (imgRef == 'monthly') {
+      const currentRef = db.ref(`/${id}/monthly/${ddmm}`);
+      await currentRef.set(base64Image);
+      const currentRef1 = db.ref(`/${id}/monthly/${ddmm}_time`);
+      await currentRef1.set(time);  
+      console.log(`Image data saved to Firebase at path: ${id}/monthly/${ddmm}`);
+    } else {
+      // Save the base64 image data to Firebase Database
+      const currentRef = db.ref(`/${id}/${imgRef}`);
+      await currentRef.set(base64Image);  // Save the base64 image into Firebase
+      console.log(`Image data saved to Firebase at path: ${id}/${imgRef}`);
     }
-    const img = snapshot.val();  // Base64 Image
+
+    // Trigger image processing without waiting for completion (no await)
+    processImage(id, imgRef, base64Image);  // No await, this runs asynchronously
+
+    // Return success response immediately without waiting for image processing
+    res.status(200).send(`${base642fb_branch} processed and sent to Firebase`);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).send(`Failed to process and store image ${base642fb_branch}`);
+  }
+});
+
+// Function to process the image and store result in Firebase
+const processImage = async (id, imgRef, base64Image) => {
+  try {
 
     const snapshot1 = await db.ref(`/${id}/angle`).get();
     const angle = snapshot1.exists() ? snapshot1.val() : console.log("miss angle data"); 
@@ -98,7 +128,7 @@ appServer.post(`/${processImg_branch}`, async (req, res) => {
     const endY = snapshot5.exists() ? snapshot5.val() : console.log("miss endY data");
 
     // Convert Base64 to Buffer
-    const buffer = Buffer.from(img, 'base64');
+    const buffer = Buffer.from(base64Image, 'base64');
 
     // Process the image using Sharp
     let processedImage = await sharp(buffer)
@@ -124,20 +154,47 @@ appServer.post(`/${processImg_branch}`, async (req, res) => {
     // Convert processed image to Base64
     const processedBase64 = processedImage.toString('base64');
 
-    // Generate cutRef for the processed image
-    const cutRef = "cut_" + imgRef;
-    const cutimgrRef = db.ref(`/${id}/${cutRef}`);
-
-    // Store the processed image (Base64) into Firebase
-    await cutimgrRef.set(processedBase64);
-
-    // Wait for Img2Text result
     const number = await Img2Text(processedBase64);  // Use await to get the number from Img2Text
+    
+    let resultRefPath;
 
-    // Store the result into Firebase
-    const numbRef = "number_" + imgRef;
-    const numberRef = db.ref(`/${id}/${numbRef}`);
-    await numberRef.set(number);  // Save the number into Firebase
+    // Check if imgRef is "monthly", and set result path accordingly
+    if(imgRef === 'monthly'){
+      resultRefPath = `/${id}/result_w_mthly/${ddmm}`;
+
+    } else{
+      resultRefPath = `/${id}/result_${imgRef}`;
+    }
+
+    const resultRef = db.ref(resultRefPath);
+    await resultRef.set(number);
+
+    console.log(`Image processed and stored at ${resultRefPath}`);
+    
+  } catch (error) {
+    // Handle any errors that occur during image processing
+    console.error('Error processing image:', error);
+    // Optionally log the error to a separate error tracking system
+  }
+};
+
+
+const processImg_branch = "processImage"
+
+// Post endpoint to process image and store result in Firebase
+appServer.post(`/${processImg_branch}`, async (req, res) => {
+  try {
+    // Retrieve 'id' and 'imgRef' from query parameters
+    const { id, imgRef } = req.query; 
+    const { base64Image } = req.body;  
+
+    // Check if all required parameters are present
+    if (!id || !imgRef || !base64Image) {
+      return res.status(400).send('Missing "id", "imgRef" or "base64Image"');
+    }
+
+    // Process the image and store result
+    await processImage(id, imgRef, base64Image);
 
     // Return success response
     res.status(200).send(`${processImg_branch} processed and sent to Firebase`);
@@ -148,111 +205,27 @@ appServer.post(`/${processImg_branch}`, async (req, res) => {
   }
 });
 
-// const swapImg_branch = "swapImageMonthly"
-// appServer.post(`/${swapImg_branch}`, async (req, res) => {
-//   try {
+// Listen for POST requests from ESP32 or any device
+appServer.post('/ping', async (req, res) => {
 
-//     const { id, preRef, curRef, newcurRef  } = req.query;
-    
-//     if (!id || !preRef || !curRef || !newcurRef) {
-//       return res.status(400).send('Missing "id", "preRef", "curRef" or "newcurRef"');
-//     }
+  const randomNumber = Math.floor(Math.random() * 1000);
+  console.log(randomNumber);
+  
+  // Send a response back to the client
+  res.status(200).send(`ping ok, randomNumber: ${randomNumber}`);
+});
 
-//     // Lấy dữ liệu từ Firebase
-//     const snapshot1 = await db.ref(`/${id}/${curRef}`).get();
-//     const current = snapshot1.val(); // Base64 Image
+appServer.get('/html', async (req, res) => {
+  try {
+    res.status(200).send("hello, world");
+  } catch (error) {
+    res.status(500).send('Failed to /html');
+  }
+});
 
-//     const snapshot2 = await db.ref(`/${id}/${newcurRef}`).get();
-//     const newcurrent = snapshot2.val(); // Base64 Image
-    
-//     const currentRef = db.ref(`/${id}/${curRef}`);
-//     await currentRef.set(newcurrent);  // Save the number into Firebase
+// const port = 8080;
 
-//     const previousRef = db.ref(`/${id}/${preRef}`);
-//     await previousRef.set(current);  // Save the number into Firebase
-
-
-//     // Return success response
-//     res.status(200).send(`${swapImg_branch} processed and sent to Firebase`);
-
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).send(`Failed to process and store image ${swapImg_branch}`);
-//   }
+// // Start the server
+// appServer.listen(port, () => {
+//   console.log(`Server running on http://localhost:${port}`);
 // });
-
-const base642fb_branch = "base642fb"
-appServer.post(`/${base642fb_branch}`, async (req, res) => {
-  try {
-    // Extract id, imgRef, and base64Image from the request
-    const { id, imgRef } = req.query;  // Extract query parameters
-    const { base64Image } = req.body;  // Extract body content
-
-    // Check if all required parameters are present
-    if (!id || !imgRef || !base64Image) {
-      return res.status(400).send('Missing "id", "imgRef" or "base64Image"');
-    }
-
-    // Save the base64 image data to Firebase Database
-    const currentRef = db.ref(`/${id}/${imgRef}`);
-    await currentRef.set(base64Image);  // Save the base64 image into Firebase
-
-    console.log(`Image data saved to Firebase at path: ${id}/${imgRef}`);
-
-    // Return success response
-    res.status(200).send(`${base642fb_branch} processed and sent to Firebase`);
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).send(`Failed to process and store image ${base642fb_branch}`);
-  }
-});
-
-const branch = "storage"
-appServer.post(`/${branch}`, async (req, res) => {
-  try {
-    // Extract id, newcurRef, and base64Image from the request
-    const { id } = req.query;
-    const { base64Image } = req.body;  // Assuming you're sending the base64 in the request body
-
-    if (!id || !base64Image) {
-      return res.status(400).send('Missing "id" or "base64Image"');
-    }
-
-    // Decode the base64 image to a buffer
-    let buffer;
-    if (base64Image.startsWith('data:image/')) {
-      const base64Data = base64Image.split(',')[1];  // Remove the data URL prefix
-      buffer = Buffer.from(base64Data, 'base64');
-    } else {
-      buffer = Buffer.from(base64Image, 'base64');
-    }
-
-    const ddmmyyyy = (new Date()).toLocaleDateString('en-GB', { 
-      timeZone: 'Asia/Bangkok', 
-    }).replace(/[\/]/g, '_');;
-    // console.log(formattedDateGMT7);
-
-    const storagePath = `doan3/${id}/${ddmmyyyy}.jpg`;  // You can change the file extension based on the image type
-
-    // Upload the image to Firebase Storage
-    const file = storage.bucket().file(storagePath);
-    await file.save(buffer, {
-      contentType: 'image/jpeg',  // Adjust the content type based on your image format
-    });
-
-    console.log(`Image saved to Firebase Storage at path: ${storagePath}`);
-
-    // Return success response
-    res.status(200).send(`${branch} processed and save to Storage`);
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).send(`Failed to process and store image ${branch}`);
-  }
-});
-
-// Start the server
-appServer.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
