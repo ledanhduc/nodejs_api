@@ -5,7 +5,7 @@ import path from 'path'; // To handle file paths
 import sharp from 'sharp';
 
 const appServer = express();
-
+const port = 8080;
 
 // Read the Firebase authentication JSON file
 const serviceAccount = JSON.parse(readFileSync(path.resolve('./sendopt-20057-b6de5656112f.json'), 'utf8'));
@@ -169,6 +169,7 @@ const processImage = async (id, imgRef, base64Image) => {
     const resultRef = db.ref(resultRefPath);
     await resultRef.set(number);
 
+
     console.log(`Image processed and stored at ${resultRefPath}`);
     
   } catch (error) {
@@ -177,7 +178,6 @@ const processImage = async (id, imgRef, base64Image) => {
     // Optionally log the error to a separate error tracking system
   }
 };
-
 
 const processImg_branch = "processImage"
 
@@ -205,25 +205,20 @@ appServer.post(`/${processImg_branch}`, async (req, res) => {
   }
 });
 
-// Listen for POST requests from ESP32 or any device
-appServer.post('/ping', async (req, res) => {
-
-  const randomNumber = Math.floor(Math.random() * 1000);
-  console.log(randomNumber);
-  
-  // Send a response back to the client
-  res.status(200).send(`ping ok, randomNumber: ${randomNumber}`);
-});
-
 appServer.get('/html', async (req, res) => {
   try {
-    res.status(200).send("hello, world");
+    res.status(200).send('hello, world');
   } catch (error) {
-    res.status(500).send('Failed to /html');
+    res.status(500).send('Failed to display image');
   }
 });
 
-const port = 8080;
+appServer.post('/ping', async (req, res) => {
+  const randomNumber = Math.floor(Math.random() * 1000);
+  console.log(randomNumber);
+
+  res.status(200).send(`ping ok, randomNumber: ${randomNumber}`);
+});
 
 // Start the server
 appServer.listen(port, () => {
