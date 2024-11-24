@@ -223,9 +223,9 @@ appServer.get('/html', async (req, res) => {
   }
 });
 
-// const port = 8080;
+const port = 8080;
 
-// // Start the server
-// appServer.listen(port, () => {
-//   console.log(`Server running on http://localhost:${port}`);
-// });
+// Start the server
+appServer.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
+});
