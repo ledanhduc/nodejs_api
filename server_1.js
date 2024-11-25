@@ -20,7 +20,7 @@ admin.initializeApp({
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 //\\\     #root file server_1_3.js                \\\\
-
+//\\\     + add post /html get /ping -> 4 test        \\\\
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 appServer.use(express.json({ limit: '1mb' }));  // Giới hạn payload là 1MB
@@ -33,7 +33,7 @@ async function Img2Text(base64Image) {
   return new Promise((resolve, reject) => {
     const requestData = { image_base64: base64Image };
 
-    fetch('https://virtually-excited-quail.ngrok-free.app/process_image', {
+    fetch('https://jay-shining-sole.ngrok-free.app/process_image', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
