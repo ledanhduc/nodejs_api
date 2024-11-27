@@ -177,11 +177,11 @@ const processImage = async (id, imgRef, base64Image) => {
 
     // Check if imgRef is "monthly", and set result path accordingly
     if(imgRef === 'monthly'){
-      resultRefPath = `/${id}/result_w_mthly/${mm}`;
+      resultRefPath = `/${id}/monthly/${mm}_result`;
 
     }
     if(imgRef === 'daily'){
-      resultRefPath = `/${id}/result_w_daily/${dd}`;
+      resultRefPath = `/${id}/monthly/${dd}_result`;
     }
 
 
@@ -221,6 +221,22 @@ appServer.post(`/${processImg_branch}`, async (req, res) => {
     res.status(500).send(`Failed to process and store img -${processImg_branch}: ` + error.message);
   }
 });
+
+// const log_branch = "log"
+
+// // Post endpoint to process image and store result in Firebase
+// appServer.post(`/${log_branch}`, async (req, res) => {
+//   try {
+//     // Retrieve 'id' and 'imgRef' from query parameters
+//     const { id, imgRef } = req.query; 
+//     const { base64Image } = req.body;  
+
+
+//   } catch (error) {
+//     console.error('Error processing image:', error);
+//     res.status(500).send(`Failed to process and store img -${log_branch}: ` + error.message);
+//   }
+// });
 
 appServer.get('/html', async (req, res) => {
   try {
