@@ -33,7 +33,7 @@ async function Img2Text(base64Image) {
   return new Promise((resolve, reject) => {
     const requestData = { image_base64: base64Image };
 
-    fetch('https://jay-shining-sole.ngrok-free.app//process_image', {
+    fetch('https://weevil-decent-legally.ngrok-free.app/process_image', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -111,7 +111,10 @@ appServer.post(`/${base642fb_branch}`, async (req, res) => {
     }
 
     // Trigger image processing without waiting for completion (no await)
-    processImage(id, imgRef, base64Image);  // No await, this runs asynchronously
+    // if(imgRef == 'daily' || imgRef == 'monthly'){
+    //   processImage(id, imgRef, base64Image);  // No await, this runs asynchronously
+    // } 
+    (imgRef === 'daily' || imgRef === 'monthly') && processImage(id, imgRef, base64Image);
 
     // Return success response immediately without waiting for image processing
     res.status(200).send(`${base642fb_branch} processed and sent to Firebase`);
