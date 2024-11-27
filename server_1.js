@@ -33,7 +33,7 @@ async function Img2Text(base64Image) {
   return new Promise((resolve, reject) => {
     const requestData = { image_base64: base64Image };
 
-    fetch('https://jay-shining-sole.ngrok-free.app/process_image', {
+    fetch('https://jay-shining-sole.ngrok-free.app//process_image', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -61,9 +61,13 @@ async function Img2Text(base64Image) {
   });
 }
 
-const ddmm = (new Date()).toLocaleDateString('en-GB', { 
+const mm = (new Date()).toLocaleDateString('en-GB', { 
   timeZone: 'Asia/Bangkok', 
 }).split('/').slice(1, 2).join('_');
+
+const dd = (new Date()).toLocaleDateString('en-GB', { 
+  timeZone: 'Asia/Bangkok', 
+}).split('/').slice(0, 1).join('_');
 
 const time = (new Date()).toLocaleTimeString('en-GB', { 
   timeZone: 'Asia/Bangkok',
@@ -84,12 +88,22 @@ appServer.post(`/${base642fb_branch}`, async (req, res) => {
     }
 
     if (imgRef == 'monthly') {
-      const currentRef = db.ref(`/${id}/monthly/${ddmm}`);
+      const currentRef = db.ref(`/${id}/monthly/${mm}`);
       await currentRef.set(base64Image);
-      const currentRef1 = db.ref(`/${id}/monthly/${ddmm}_time`);
+      const currentRef1 = db.ref(`/${id}/monthly/${mm}_time`);
       await currentRef1.set(time);  
-      console.log(`Image data saved to Firebase at path: ${id}/monthly/${ddmm}`);
-    } else {
+      console.log(`Image data saved to Firebase at path: ${id}/monthly/${mm}`);
+    }
+    
+    if (imgRef == 'daily') {
+      const currentRef = db.ref(`/${id}/daily/${dd}`);
+      await currentRef.set(base64Image);
+      const currentRef1 = db.ref(`/${id}/daily/${dd}_time`);
+      await currentRef1.set(time);  
+      console.log(`Image data saved to Firebase at path: ${id}/daily/${dd}`);
+    } 
+    
+    if (imgRef == 'img_config') {
       // Save the base64 image data to Firebase Database
       const currentRef = db.ref(`/${id}/${imgRef}`);
       await currentRef.set(base64Image);  // Save the base64 image into Firebase
@@ -160,22 +174,22 @@ const processImage = async (id, imgRef, base64Image) => {
 
     // Check if imgRef is "monthly", and set result path accordingly
     if(imgRef === 'monthly'){
-      resultRefPath = `/${id}/result_w_mthly/${ddmm}`;
+      resultRefPath = `/${id}/result_w_mthly/${mm}`;
 
-    } else{
-      resultRefPath = `/${id}/result_${imgRef}`;
     }
+    if(imgRef === 'daily'){
+      resultRefPath = `/${id}/result_w_daily/${dd}`;
+    }
+
 
     const resultRef = db.ref(resultRefPath);
     await resultRef.set(number);
-
 
     console.log(`Image processed and stored at ${resultRefPath}`);
     
   } catch (error) {
     // Handle any errors that occur during image processing
     console.error('Error processing image:', error);
-    // Optionally log the error to a separate error tracking system
   }
 };
 
