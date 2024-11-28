@@ -1,10 +1,11 @@
 import express from 'express';
 import admin from 'firebase-admin';
 import { readFileSync } from 'fs'; // To read JSON file
+import moment from 'moment-timezone';
 import path from 'path'; // To handle file paths
 import sharp from 'sharp';
 import fetch from 'node-fetch';
-import moment from 'moment-timezone'; 
+
 const appServer = express();
 const port = 8080;
 
@@ -18,6 +19,15 @@ admin.initializeApp({
   storageBucket: 'gs://sendopt-20057.appspot.com'
 });
 
+// Utility function để lấy thời gian Việt Nam
+function getVietnameTime() {
+  const vietnamTime = moment().tz('Asia/Ho_Chi_Minh');
+  return {
+    mm: vietnamTime.format('MM'),
+    dd: vietnamTime.format('DD'),
+    time: vietnamTime.format('HH:mm:ss')
+  };
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 //\\\     #root file server_1_3.js                \\\\
@@ -62,27 +72,10 @@ async function Img2Text(base64Image) {
   });
 }
 
-// const mm = (new Date()).toLocaleDateString('en-GB', { 
-//   timeZone: 'Asia/Ho_Chi_Minh',  
-// }).split('/').slice(1, 2).join('_');
-
-// const dd = (new Date()).toLocaleDateString('en-GB', { 
-//   timeZone: 'Asia/Ho_Chi_Minh',  
-// }).split('/').slice(0, 1).join('_'); 
-
-// const time = (new Date()).toLocaleTimeString('en-GB', { 
-//   timeZone: 'Asia/Ho_Chi_Minh',  
-//   hour12: false 
-// });
-
-// Sử dụng moment-timezone để lấy thời gian và ngày theo múi giờ Asia/Ho_Chi_Minh
-const mm = moment().tz('Asia/Ho_Chi_Minh').format('MM');  // Tháng
-const dd = moment().tz('Asia/Ho_Chi_Minh').format('DD');  // Ngày
-const time = moment().tz('Asia/Ho_Chi_Minh').format('HH:mm:ss');  // Giờ theo định dạng 24h
-
 // API process base64 save to Firebase
 const base642fb_branch = "base642fb";
 appServer.post(`/${base642fb_branch}`, async (req, res) => {
+  const { mm, dd, time } = getVietnameTime();
   try {
     // Extract id, imgRef, and base64Image from the request
     const { id, imgRef } = req.query;  // Extract query parameters
@@ -133,6 +126,7 @@ appServer.post(`/${base642fb_branch}`, async (req, res) => {
 
 // Function to process the image and store result in Firebase
 const processImage = async (id, imgRef, base64Image) => {
+  const { mm, dd } = getVietnameTime();
   try {
 
     const snapshot1 = await db.ref(`/${id}/angle`).get();
@@ -253,13 +247,13 @@ appServer.get('/html', async (req, res) => {
 });
 
 appServer.post('/ping', async (req, res) => {
+  const { mm, dd, time } = getVietnameTime();
   const randomNumber = Math.floor(Math.random() * 1000);
-  
+
   console.log(randomNumber);
   console.log(`Month: ${mm}`);
   console.log(`Day: ${dd}`);
   console.log(`Time: ${time}`);
-
   res.status(200).send(`ping ok, randomNumber: ${randomNumber}`);
 });
 
