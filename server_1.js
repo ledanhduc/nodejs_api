@@ -62,16 +62,16 @@ async function Img2Text(base64Image) {
 }
 
 const mm = (new Date()).toLocaleDateString('en-GB', { 
-  timeZone: 'Asia/Bangkok', 
+  timeZone: 'Asia/Ho_Chi_Minh',  
 }).split('/').slice(1, 2).join('_');
 
 const dd = (new Date()).toLocaleDateString('en-GB', { 
-  timeZone: 'Asia/Bangkok', 
-}).split('/').slice(0, 1).join('_');
+  timeZone: 'Asia/Ho_Chi_Minh',  
+}).split('/').slice(0, 1).join('_'); 
 
 const time = (new Date()).toLocaleTimeString('en-GB', { 
-  timeZone: 'Asia/Bangkok',
-  hour12: false  // Tùy chọn này sẽ giúp lấy giờ theo định dạng 24h
+  timeZone: 'Asia/Ho_Chi_Minh',  
+  hour12: false 
 });
 
 // API process base64 save to Firebase
