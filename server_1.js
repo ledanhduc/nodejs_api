@@ -3,7 +3,8 @@ import admin from 'firebase-admin';
 import { readFileSync } from 'fs'; // To read JSON file
 import path from 'path'; // To handle file paths
 import sharp from 'sharp';
-
+import fetch from 'node-fetch';
+import moment from 'moment-timezone'; 
 const appServer = express();
 const port = 8080;
 
@@ -61,18 +62,23 @@ async function Img2Text(base64Image) {
   });
 }
 
-const mm = (new Date()).toLocaleDateString('en-GB', { 
-  timeZone: 'Asia/Ho_Chi_Minh',  
-}).split('/').slice(1, 2).join('_');
+// const mm = (new Date()).toLocaleDateString('en-GB', { 
+//   timeZone: 'Asia/Ho_Chi_Minh',  
+// }).split('/').slice(1, 2).join('_');
 
-const dd = (new Date()).toLocaleDateString('en-GB', { 
-  timeZone: 'Asia/Ho_Chi_Minh',  
-}).split('/').slice(0, 1).join('_'); 
+// const dd = (new Date()).toLocaleDateString('en-GB', { 
+//   timeZone: 'Asia/Ho_Chi_Minh',  
+// }).split('/').slice(0, 1).join('_'); 
 
-const time = (new Date()).toLocaleTimeString('en-GB', { 
-  timeZone: 'Asia/Ho_Chi_Minh',  
-  hour12: false 
-});
+// const time = (new Date()).toLocaleTimeString('en-GB', { 
+//   timeZone: 'Asia/Ho_Chi_Minh',  
+//   hour12: false 
+// });
+
+// Sử dụng moment-timezone để lấy thời gian và ngày theo múi giờ Asia/Ho_Chi_Minh
+const mm = moment().tz('Asia/Ho_Chi_Minh').format('MM');  // Tháng
+const dd = moment().tz('Asia/Ho_Chi_Minh').format('DD');  // Ngày
+const time = moment().tz('Asia/Ho_Chi_Minh').format('HH:mm:ss');  // Giờ theo định dạng 24h
 
 // API process base64 save to Firebase
 const base642fb_branch = "base642fb";
@@ -248,7 +254,11 @@ appServer.get('/html', async (req, res) => {
 
 appServer.post('/ping', async (req, res) => {
   const randomNumber = Math.floor(Math.random() * 1000);
+  
   console.log(randomNumber);
+  console.log(`Month: ${mm}`);
+  console.log(`Day: ${dd}`);
+  console.log(`Time: ${time}`);
 
   res.status(200).send(`ping ok, randomNumber: ${randomNumber}`);
 });
