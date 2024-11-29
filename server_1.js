@@ -5,6 +5,7 @@ import moment from 'moment-timezone';
 import path from 'path'; // To handle file paths
 import sharp from 'sharp';
 import fetch from 'node-fetch';
+import cors from 'cors';
 
 const appServer = express();
 const port = 8080;
@@ -18,6 +19,8 @@ admin.initializeApp({
   databaseURL: 'https://sendopt-20057-default-rtdb.asia-southeast1.firebasedatabase.app',  // Firebase Realtime Database URL
   storageBucket: 'gs://sendopt-20057.appspot.com'
 });
+
+app.use(cors());
 
 // Utility function để lấy thời gian Việt Nam
 function getVietnameTime() {
