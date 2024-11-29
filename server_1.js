@@ -263,6 +263,6 @@ appServer.post('/ping', async (req, res) => {
 });
 
 // Start the server
-appServer.listen(port, () => {
+appServer.listen(port, "0.0.0.0", () => {
   console.log(`Server running on http://localhost:${port}`);
 });
