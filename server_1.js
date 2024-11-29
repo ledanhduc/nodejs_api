@@ -8,7 +8,7 @@ import fetch from 'node-fetch';
 import cors from 'cors';
 
 const appServer = express();
-const port = 8080;
+const port = 80;
 
 // Read the Firebase authentication JSON file
 const serviceAccount = JSON.parse(readFileSync(path.resolve('./sendopt-20057-b6de5656112f.json'), 'utf8'));
