@@ -20,7 +20,6 @@ admin.initializeApp({
   storageBucket: 'gs://sendopt-20057.appspot.com'
 });
 
-app.use(cors());
 
 // Utility function để lấy thời gian Việt Nam
 function getVietnameTime() {
@@ -38,6 +37,9 @@ function getVietnameTime() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 appServer.use(express.json({ limit: '1mb' }));  // Giới hạn payload là 1MB
+
+appServer.use(cors());
+
 
 const db = admin.database();
 // const storage = admin.storage();
