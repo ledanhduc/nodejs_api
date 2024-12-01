@@ -245,42 +245,42 @@ appServer.post('/ping', async (req, res) => {
 
 
 let lastHeartbeatTimes = {}; // lưu trữ thời gian heartbeat
-const TIMEOUT = 30 * 1000; 
+let offlineDevices = {}; // Track offline devices
+const TIMEOUT = 35 * 1000; 
 
 // api 4 test
 appServer.post('/status', async (req, res) => {
-    try {
-        const id = req.query.id;
-        const currentRef = db.ref(`/${id}/status`);
-        // console.log(id);
-    
-        //update time heartbeat 
-        lastHeartbeatTimes[id] = Date.now();
-    
-        await currentRef.set(true);
-        res.status(200).send();
-      } catch (error) {
-        res.status(500).send('status err');
-      }
-});
+  try {
+      const id = req.query.id;
+      const currentRef = db.ref(`/${id}/status`);
+      // console.log(id);
+  
+      //update time heartbeat 
+      lastHeartbeatTimes[id] = Date.now();
+      offlineDevices[id] = false; 
 
+      await currentRef.set(true);
+      res.status(200).send();
+    } catch (error) {
+      res.status(500).send('status err');
+    }
+});
 // Hàm kiểm tra trạng thái kết nối của thiết bị
 function checkConnectionStatus(id) {
-    // const { time } = getVietnameTime();
-    const currentTime = Date.now();
-    const lastHeartbeatTime = lastHeartbeatTimes[id];
+  // const { time } = getVietnameTime();
+  const currentTime = Date.now();
+  const lastHeartbeatTime = lastHeartbeatTimes[id];
 
-    //nếu heartbeat và currentTime vượt TIMEOUT
-    if (lastHeartbeatTime && (currentTime - lastHeartbeatTime > TIMEOUT)) {
+  //nếu heartbeat và currentTime vượt TIMEOUT
+  if (lastHeartbeatTime && (currentTime - lastHeartbeatTime > TIMEOUT)) {
+      const currentRef = db.ref(`/${id}/status/`);
+      currentRef.set(false);
 
-        const currentRef = db.ref(`/${id}/status/`);
-        currentRef.set(false);
-        // console.log(`${time} Device ${id} is offline (no heartbeat received in ${TIMEOUT / 1000} seconds).`);
+      if(offlineDevices[id] == false){
         console.log(`${id} is offline.`);
-    } 
-    // else {
-    //     console.log(`${id} is online.`);
-    // }
+      }
+      offlineDevices[id] = true
+  }
 }
 
 //kiểm tra kết nối cho mỗi ID 
