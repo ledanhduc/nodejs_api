@@ -292,8 +292,8 @@ setInterval(() => {
     }
 }, TIMEOUT);
 
-// const port = process.env.PORT || 8080;
-const port = 8080;
+const port = process.env.PORT || 8080;
+// const port = 8080;
 
 // Start the server
 appServer.listen(port, () => {
