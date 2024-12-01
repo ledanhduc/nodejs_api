@@ -31,7 +31,7 @@ function getVietnameTime() {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-//\\\     #root file server_2.js                \\\\
+//\\\     #root file server_1_4.js                \\\\
 //\\\     + add post /html get /ping -> 4 test        \\\\
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -277,9 +277,10 @@ function checkConnectionStatus(id) {
         currentRef.set(false);
         // console.log(`${time} Device ${id} is offline (no heartbeat received in ${TIMEOUT / 1000} seconds).`);
         console.log(`${id} is offline.`);
-    } else {
-        console.log(`${id} is online.`);
-    }
+    } 
+    // else {
+    //     console.log(`${id} is online.`);
+    // }
 }
 
 //kiểm tra kết nối cho mỗi ID 
